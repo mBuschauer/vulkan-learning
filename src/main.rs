@@ -19,8 +19,15 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
 
-/// The Vulkan SDK version that started requiring the portability subset extension for macOS.
-const PORTABILITY_MACOS_VERSION: Version = Version::new(1, 3, 216);
+use std::collections::HashSet;
+use std::ffi::CStr;
+use std::os::raw::c_void;
+
+use vulkanalia::vk::ExtDebugUtilsExtension;
+
+const VALIDATION_ENABLED: bool = cfg!(debug_assertions);
+
+const VALIDATION_LAYER: vk::ExtensionName = vk::ExtensionName::from_bytes(b"VK_LAYER_KHRONOS_validation");
 
 #[rustfmt::skip]
 fn main() -> Result<()> {
@@ -110,11 +117,26 @@ unsafe fn create_instance(window: &Window, entry: &Entry) -> Result<Instance> {
         .map(|e| e.as_ptr())
         .collect::<Vec<_>>();
 
-    // Create
+    let available_layers = entry
+        .enumerate_instance_layer_properties()?
+        .iter()
+        .map(|l| l.layer_name)
+        .collect::<HashSet<_>>();
+
+    if VALIDATION_ENABLED && !available_layers.contains(&VALIDATION_LAYER) {
+        return Err(anyhow!("Validation layer requested but not supported."));
+    }
+
+    let layers = if VALIDATION_ENABLED {
+        vec![VALIDATION_LAYER.as_ptr()]
+    } else {
+        Vec::new()
+    };
 
     let info = vk::InstanceCreateInfo::builder()
-        .application_info(&application_info)
-        .enabled_extension_names(&extensions);
+    .application_info(&application_info)
+    .enabled_layer_names(&layers)
+    .enabled_extension_names(&extensions);
 
     Ok(entry.create_instance(&info, None)?)
 }
