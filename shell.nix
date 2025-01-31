@@ -43,9 +43,10 @@ mkShell {
     echo "extension-layer: ${vulkan-extension-layer}"
   '';
 
-  LD_LIBRARY_PATH = "${lib.makeLibraryPath buildInputs}";
+  LD_LIBRARY_PATH =
+    "${glfw}/lib:${freetype}/lib:${vulkan-loader}/lib:${vulkan-validation-layers}/lib:${wayland}/lib:${libxkbcommon}/lib";
 
-  VULKAN_SDK = "${vulkan-validation-layers}/share/vulkan/explicit_layer.d";
+  VULKAN_SDK = "${vulkan-tools-lunarg}";
   VK_LAYER_PATH = "${vulkan-validation-layers}/share/vulkan/explicit_layer.d";
   PATH = "${vulkan-tools}/bin:"
     + builtins.getEnv "PATH"; # sets up vulkan application environment
